@@ -1,0 +1,65 @@
+#!/usr/bin/python
+import urllib.request
+import sys
+import re
+import subprocess
+bold='\033[1m'
+underline='\033[4m'
+normal='\033[0m'
+
+data=str(subprocess.run(["curl",sys.argv[1],"-H","User-Agent:Mozilla/5.0 (X11; Linux x86_64; rv:98.0) Gecko/20100101 Firefox/98.0'"],capture_output=True).stdout)
+print(data)
+for i in re.findall('<.*?>\\n?',data):
+    if(re.search("<br.*?",i)
+            or re.search("<p.*?>",i)):
+        data=data.replace(i,"\n")
+    if(re.search("(?sm)<\!DOCTYPE html.*>",i)
+            or re.search("(?sm)<.?html.*>",i)
+            or re.search("(?sm)<\/p.*>",i)
+            or re.search("(?sm)<.?div.*>",i)
+            or re.search("(?sm)<link.*>",i)
+            or re.search("(?sm)<.?main.*?>",i)
+            or re.search("(?sm)<.?body.*?>",i)
+            or re.search("(?sm)<\!.*>",i)
+            or re.search("(?sm)<meta.*\/>",i)):
+        data=data.replace(i,'')
+
+data=data.replace("  ",'')
+data=data.replace(chr(9),'')
+buttons=re.findall('(?sm)<button.*?>.*?<\/button>\\n?',data)
+if buttons:
+    for i in buttons:
+        if(re.search(">.*<",i)):
+            placeholder=re.findall(">.*<",i)[0][1:][:-1]
+            data=data.replace(i,f' [{placeholder}] ')
+        else:
+            data=data.replace(i," [      ] ")
+inputs=re.findall('(?sm)<input.*?>\\n?',data)
+if inputs:
+    for i in inputs:
+        if(re.search("placeholder=[\'\"].*[\'\"]",i)):
+            placeholder=re.findall("placeholder=[\'\"].*?[\'\"]",i)[0]
+            placeholder=re.findall("[\'\"].*?[\'\"]",placeholder)[0].strip('"')
+            data=data.replace(i,f'({placeholder})')
+        else:
+            data=data.replace(i,"(      )")
+if re.search('(?sm)<style.*>.*<\/style>',data):
+    for i in re.findall('(?sm)<style.*>.*<\/style>\\n?',data):
+        data=data.replace(i,'')
+if re.search('(?sm)<script.*>.*<\/script>',data):
+    for i in re.findall('(?sm)<script.*>.*<\/script>\\n?',data):
+        data=data.replace(i,'')
+if re.search('(?sm)<head>.*<\/head>',data):
+    for i in re.findall('(?sm)<head>.*<\/head>\\n?',data):
+        data=data.replace(i,'')
+if re.search('<h[0-9]*.*>.*</h[0-9]*>',data):
+    for i in re.findall('<h[0-9]*.*>.*</h[0-9]>',data):
+        data=data.replace(i,f'{bold}{re.findall(">.*<",i)[0][1:][:-1]}{normal}')
+if re.search('<a.*["\'].*>.*<\/a>',data):
+    for i in re.findall('<a.*>.*<\/a>',data):
+        data=data.replace(i,f'{underline}{re.findall(">.*<",i)[0][1:][:-1]}{normal}')
+unusedtags=re.findall("<.*?\/?>.*<?\/?.*?>?\\n?",data)
+for i in unusedtags:
+    data=data.replace(i,"")
+
+print("------\n",data)
